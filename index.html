@@ -1,0 +1,2512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2 Оптимизатор маршрутов</title>
+    <style>
+        :root {
+            --t2-black: #0b0b0f;
+            --t2-black-soft: #17171d;
+            --t2-white: #ffffff;
+            --t2-surface: #f6f8fb;
+            --t2-surface-strong: #eef5ff;
+            --t2-border: #d9e5f5;
+            --t2-pink: #ff4fa3;
+            --t2-pink-dark: #ff2f8c;
+            --t2-cyan: #5fd7ff;
+            --t2-cyan-deep: #21bff5;
+            --t2-text: #11131a;
+            --t2-muted: #5f6b7a;
+            --t2-shadow: 0 18px 44px rgba(11, 11, 15, 0.18);
+            --t2-gradient: linear-gradient(135deg, var(--t2-pink) 0%, var(--t2-cyan) 100%);
+            --t2-gradient-dark: linear-gradient(135deg, var(--t2-black) 0%, #21212a 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(255, 79, 163, 0.22), transparent 30%),
+                radial-gradient(circle at top right, rgba(95, 215, 255, 0.2), transparent 26%),
+                linear-gradient(180deg, #0b0b0f 0%, #141821 48%, #eaf5ff 100%);
+            min-height: 100vh;
+            color: var(--t2-text);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: var(--t2-white);
+            padding: 32px 20px 24px;
+            margin-bottom: 30px;
+        }
+
+        .brand-header {
+            display: inline-flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px 22px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: var(--t2-shadow);
+        }
+
+        .brand-mark {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            background: var(--t2-gradient-dark);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
+        }
+
+        .brand-mark::before {
+            content: '';
+            position: absolute;
+            inset: auto -10px -6px auto;
+            width: 42px;
+            height: 42px;
+            background: radial-gradient(circle, var(--t2-pink) 0%, rgba(255,79,163,0) 72%);
+        }
+
+        .brand-mark::after {
+            content: '';
+            position: absolute;
+            inset: -14px auto auto -14px;
+            width: 46px;
+            height: 46px;
+            background: radial-gradient(circle, var(--t2-cyan) 0%, rgba(95,215,255,0) 70%);
+        }
+
+        .brand-mark span {
+            position: relative;
+            z-index: 1;
+            font-size: 2rem;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -0.08em;
+            text-transform: lowercase;
+            color: var(--t2-white);
+        }
+
+        .brand-copy {
+            text-align: left;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: var(--t2-shadow);
+            border: 1px solid rgba(95, 215, 255, 0.22);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255,255,255,0.72);
+            border: none;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: var(--t2-muted);
+        }
+
+        .nav-tab:hover {
+            background: rgba(95, 215, 255, 0.14);
+        }
+
+        .nav-tab.active {
+            background: var(--t2-gradient);
+            color: var(--t2-black);
+        }
+
+        .content-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.94);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--t2-shadow);
+            animation: fadeIn 0.3s ease;
+            border: 1px solid rgba(95, 215, 255, 0.22);
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--t2-black);
+            margin-bottom: 25px;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        h3 {
+            color: var(--t2-black-soft);
+            margin: 20px 0 15px;
+            font-size: 1.3em;
+        }
+
+        .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(239,246,255,0.92) 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--t2-pink);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(95, 215, 255, 0.18);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            background: var(--t2-gradient);
+            color: var(--t2-black);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px rgba(255, 79, 163, 0.28);
+        }
+
+        .btn-secondary {
+            background: var(--t2-gradient-dark);
+            color: var(--t2-white);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--t2-cyan) 0%, #8ce7ff 100%);
+            color: var(--t2-black);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--t2-black) 0%, #2b2b35 100%);
+            color: var(--t2-white);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--t2-pink) 0%, #ff8ec4 100%);
+            color: var(--t2-black);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .stat-card {
+            background:
+                radial-gradient(circle at top right, rgba(95, 215, 255, 0.25), transparent 30%),
+                radial-gradient(circle at bottom left, rgba(255, 79, 163, 0.24), transparent 32%),
+                var(--t2-gradient-dark);
+            color: var(--t2-white);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            font-size: 0.95em;
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th {
+            background: var(--t2-gradient-dark);
+            color: var(--t2-white);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .badge-a { background: rgba(255, 79, 163, 0.16); color: #9d0d58; }
+        .badge-b { background: rgba(95, 215, 255, 0.2); color: #065c78; }
+        .badge-c { background: rgba(17, 19, 26, 0.1); color: #161a22; }
+        .badge-d { background: rgba(95, 215, 255, 0.12); color: #0b728f; }
+        .badge-incident { background: rgba(255, 79, 163, 0.12); color: #a70b61; }
+        .badge-unavailable { background: rgba(11, 11, 15, 0.12); color: var(--t2-black); }
+
+        .progress-bar {
+            background: #e5e7eb;
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.8s ease;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background: rgba(95, 215, 255, 0.16);
+            color: #045a73;
+            border-left: 4px solid var(--t2-cyan-deep);
+        }
+
+        .alert-warning {
+            background: rgba(255, 79, 163, 0.12);
+            color: #7b1246;
+            border-left: 4px solid var(--t2-pink);
+        }
+
+        .alert-info {
+            background: rgba(95, 215, 255, 0.14);
+            color: #0b5d78;
+            border-left: 4px solid var(--t2-cyan);
+        }
+
+        .alert-danger {
+            background: rgba(11, 11, 15, 0.1);
+            color: var(--t2-black);
+            border-left: 4px solid var(--t2-black);
+        }
+
+        select, input, textarea {
+            padding: 12px 16px;
+            border: 2px solid var(--t2-border);
+            border-radius: 10px;
+            font-size: 1em;
+            margin: 5px;
+            min-width: 220px;
+            transition: border-color 0.3s;
+            width: 100%;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--t2-pink);
+            box-shadow: 0 0 0 4px rgba(255, 79, 163, 0.12);
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .route-day {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(239,246,255,0.88) 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--t2-cyan-deep);
+        }
+
+        .route-day h3 {
+            color: var(--t2-black);
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+
+        .employee-route {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s;
+        }
+
+        .employee-route:hover {
+            transform: translateX(5px);
+        }
+
+        .map-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .route-map-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(239,246,255,0.9) 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--t2-pink);
+        }
+
+        .map-stage {
+            position: relative;
+            min-height: 420px;
+            border-radius: 18px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 79, 163, 0.18), transparent 28%),
+                radial-gradient(circle at 80% 18%, rgba(95, 215, 255, 0.22), transparent 24%),
+                radial-gradient(circle at 68% 76%, rgba(11, 11, 15, 0.12), transparent 22%),
+                linear-gradient(160deg, #f9fbff 0%, #e7f3ff 52%, #f8eaf3 100%);
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+        }
+
+        .map-stage::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px);
+            background-size: 42px 42px;
+            pointer-events: none;
+        }
+
+        .map-roads {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.3;
+            background:
+                linear-gradient(115deg, transparent 20%, rgba(71, 85, 105, 0.28) 21%, rgba(71, 85, 105, 0.28) 23%, transparent 24%),
+                linear-gradient(35deg, transparent 41%, rgba(71, 85, 105, 0.28) 42%, rgba(71, 85, 105, 0.28) 44%, transparent 45%),
+                linear-gradient(160deg, transparent 60%, rgba(71, 85, 105, 0.24) 61%, rgba(71, 85, 105, 0.24) 62.5%, transparent 63.5%);
+        }
+
+        .map-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .map-node {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+            z-index: 2;
+        }
+
+        .map-node.hub {
+            width: 18px;
+            height: 18px;
+            background: #0f172a;
+        }
+
+        .map-node.stop-a { background: var(--t2-pink-dark); }
+        .map-node.stop-b { background: var(--t2-cyan-deep); }
+        .map-node.stop-c { background: var(--t2-black-soft); }
+        .map-node.stop-d { background: #8bdfff; }
+
+        .map-label {
+            position: absolute;
+            transform: translate(-50%, 10px);
+            background: rgba(255,255,255,0.92);
+            color: #0f172a;
+            padding: 4px 8px;
+            font-size: 0.78em;
+            border-radius: 999px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        .traffic-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.9em;
+            font-weight: 600;
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            font-size: 0.92em;
+            padding: 10px 12px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--t2-pink);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .three-columns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .two-columns, .three-columns {
+                grid-template-columns: 1fr;
+            }
+            .map-layout {
+                grid-template-columns: 1fr;
+            }
+            .nav-tabs {
+                flex-direction: column;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .brand-header {
+                width: 100%;
+                flex-direction: column;
+                text-align: center;
+            }
+            .brand-copy {
+                text-align: center;
+            }
+            .content-section {
+                padding: 24px 18px;
+            }
+            table {
+                min-width: 560px;
+            }
+            th, td {
+                padding: 10px 12px;
+            }
+        }
+
+        .info-tag {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(95, 215, 255, 0.16);
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.9em;
+            color: #0b5d78;
+        }
+
+        .highlight-box {
+            background: var(--t2-gradient-dark);
+            color: var(--t2-white);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .flow-number {
+            width: 40px;
+            height: 40px;
+            background: var(--t2-gradient);
+            color: var(--t2-black);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .employee-tag {
+            display: inline-block;
+            padding: 6px 14px;
+            color: white;
+            border-radius: 20px;
+            margin: 3px;
+            font-size: 0.85em;
+        }
+
+        .muted {
+            color: var(--t2-muted);
+        }
+
+        .small-note {
+            font-size: 0.9em;
+            color: var(--t2-muted);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand-header">
+                <div class="brand-mark" aria-hidden="true"><span>t2</span></div>
+                <div class="brand-copy">
+                    <h1>T2 Оптимизатор маршрутов</h1>
+                    <p class="subtitle">Интеллектуальная система планирования торговых команд</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('data', this)">📊 Данные</button>
+            <button class="nav-tab" onclick="showSection('planning', this)">🗺️ Планирование</button>
+            <button class="nav-tab" onclick="showSection('emergency', this)">⚡ Форс-мажоры</button>
+            <button class="nav-tab" onclick="showSection('analytics', this)">📈 Аналитика</button>
+        </div>
+
+        <div id="data" class="content-section active">
+            <h2>📊 База торговых точек</h2>
+
+            <div class="card">
+                <h3>Загрузка данных</h3>
+                <p>Можно работать в двух режимах: быстро сгенерировать демо-базу или вручную собрать свою команду и список точек.</p>
+                <div class="toolbar">
+                    <button class="btn" onclick="generateData()">🎲 Сгенерировать демо-данные</button>
+                    <button class="btn btn-secondary" onclick="clearData()">🗑️ Очистить данные</button>
+                </div>
+            </div>
+
+            <div class="two-columns">
+                <div class="card">
+                    <h3>Сотрудники</h3>
+                    <label for="employee-names" class="muted">Имена сотрудников, по одному в строке:</label>
+                    <textarea id="employee-names" placeholder="Иванов&#10;Петров&#10;Сидоров&#10;Кузнецов"></textarea>
+                    <div class="toolbar">
+                        <button class="btn btn-success" onclick="saveEmployees()">💾 Сохранить команду</button>
+                    </div>
+                    <div class="small-note">Планирование, форс-мажоры и аналитика автоматически используют этот список.</div>
+                    <div id="employee-list-preview" style="margin-top: 15px;"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Добавить торговую точку вручную</h3>
+                    <div class="form-grid">
+                        <div>
+                            <label class="muted" for="tt-name">Название</label>
+                            <input id="tt-name" type="text" placeholder="Например, ТТ-251">
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-district">Район</label>
+                            <input id="tt-district" type="text" list="district-options" placeholder="Введите район">
+                            <datalist id="district-options"></datalist>
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-category">Категория</label>
+                            <select id="tt-category">
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-visits">Визитов в месяц</label>
+                            <input id="tt-visits" type="number" min="0" step="0.01" placeholder="Например, 3">
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-time">Время визита, мин</label>
+                            <input id="tt-time" type="number" min="5" step="5" placeholder="Например, 30">
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-lat">Широта</label>
+                            <input id="tt-lat" type="number" step="0.0001" placeholder="54.18">
+                        </div>
+                        <div>
+                            <label class="muted" for="tt-lon">Долгота</label>
+                            <input id="tt-lon" type="number" step="0.0001" placeholder="45.18">
+                        </div>
+                    </div>
+                    <div class="toolbar">
+                        <button class="btn btn-success" onclick="addManualPoint()">➕ Добавить точку</button>
+                    </div>
+                    <div class="small-note">Если визиты и длительность не заданы, система подставит значения по категории.</div>
+                </div>
+            </div>
+
+            <div id="data-stats" class="hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-tt">0</div>
+                        <div class="stat-label">Всего торговых точек</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-districts">0</div>
+                        <div class="stat-label">Районов покрытия</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="cat-a">0</div>
+                        <div class="stat-label">Категория А (приоритет)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="cat-d">0</div>
+                        <div class="stat-label">Категория D</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Распределение по категориям</h3>
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Категория А (3 визита/мес)</span>
+                            <strong id="label-a">0 ТТ</strong>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill badge-a" id="progress-a" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Категория Б (2 визита/мес)</span>
+                            <strong id="label-b">0 ТТ</strong>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill badge-b" id="progress-b" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Категория В (1 визит/мес)</span>
+                            <strong id="label-c">0 ТТ</strong>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill badge-c" id="progress-c" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Категория Г (1 визит/квартал)</span>
+                            <strong id="label-d">0 ТТ</strong>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill badge-d" id="progress-d" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Текущие торговые точки</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="sample-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Район</th>
+                                    <th>Категория</th>
+                                    <th>Визитов/мес</th>
+                                    <th>Время визита</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sample-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="no-data" class="alert alert-info">
+                <span style="font-size: 1.5em;">ℹ️</span>
+                <div>
+                    <strong>Данные не загружены</strong><br>
+                    Нажмите "Сгенерировать демо-данные" или добавьте свои торговые точки вручную
+                </div>
+            </div>
+        </div>
+
+        <div id="planning" class="content-section">
+            <h2>🗺️ Планирование маршрутов</h2>
+
+            <div id="planning-no-data" class="alert alert-warning">
+                <span style="font-size: 1.5em;">⚠️</span>
+                <div>
+                    <strong>Требуются данные</strong><br>
+                    Сначала загрузите данные в разделе "Данные"
+                </div>
+            </div>
+
+            <div id="planning-content" class="hidden">
+                <div class="card">
+                    <h3>Параметры планирования</h3>
+                    <div class="two-columns">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Начало планового периода:</label>
+                            <input type="date" id="start-date">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Торговая команда:</label>
+                            <div id="planning-employee-tags"></div>
+                        </div>
+                    </div>
+                    <div class="two-columns" style="margin-top: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Карта маршрута:</label>
+                            <select id="map-day-select" onchange="renderRouteMap()">
+                                <option value="0">Понедельник</option>
+                                <option value="1">Вторник</option>
+                                <option value="2">Среда</option>
+                                <option value="3">Четверг</option>
+                                <option value="4">Пятница</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Автоматический трафик:</label>
+                            <div class="small-note" style="margin-top: 12px;">
+                                Утренний час пик: 08:00-10:00 • Вечерний час пик: 17:00-19:00
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <label style="display: block; margin-bottom: 8px; color: #64748b;">Алгоритм оптимизации:</label>
+                        <div class="flow-container" style="margin-top: 15px;">
+                            <div class="flow-step">
+                                <div class="flow-number">1</div>
+                                <div>Кластеризация по географии (минимизация переездов)</div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-number">2</div>
+                                <div>Приоритизация по категориям (А → Б → В → Г)</div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-number">3</div>
+                                <div>Распределение по времени (9:00-18:00, макс 8 ТТ)</div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-number">4</div>
+                                <div>Балансировка нагрузки между сотрудниками</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 25px;">
+                        <button class="btn" onclick="optimizeRoutes()">
+                            <span>🚀</span> Оптимизировать маршруты
+                        </button>
+                    </div>
+                </div>
+
+                <div id="planning-incident-banner" class="hidden"></div>
+
+                <div id="optimization-loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p style="color: #64748b;">Выполняется оптимизация маршрутов...</p>
+                </div>
+
+                <div id="schedule-result" class="hidden">
+                    <div class="alert alert-success">
+                        <span style="font-size: 1.5em;">✅</span>
+                        <div>
+                            <strong>Маршруты построены успешно!</strong><br>
+                            Оптимизация выполнена с учётом лимитов <strong>8 часов</strong> и <strong>8 ТТ в день</strong>
+                        </div>
+                    </div>
+
+                    <div id="schedule-summary"></div>
+
+                    <div class="map-layout">
+                        <div class="route-map-panel">
+                            <h3 style="margin-top: 0;">Карта маршрутов</h3>
+                            <div class="small-note">Маршрут визуализируется по координатам точек, а длина пути и пробки считаются по упрощённой модели.</div>
+                            <div id="map-summary" style="margin-top: 15px;"></div>
+                            <div class="legend-list" id="map-legend"></div>
+                        </div>
+                        <div class="map-stage" id="route-map">
+                            <div class="map-roads"></div>
+                            <svg class="map-svg" id="route-map-svg" viewBox="0 0 1000 600" preserveAspectRatio="none"></svg>
+                        </div>
+                    </div>
+
+                    <div id="schedule-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="emergency" class="content-section">
+            <h2>⚡ Обработка форс-мажорных ситуаций</h2>
+
+            <div id="emergency-no-data" class="alert alert-warning">
+                <span style="font-size: 1.5em;">⚠️</span>
+                <div>
+                    <strong>Требуется расписание</strong><br>
+                    Сначала постройте маршруты в разделе "Планирование"
+                </div>
+            </div>
+
+            <div id="emergency-content" class="hidden">
+                <div class="card">
+                    <h3>Симуляция инцидента</h3>
+                    <div class="two-columns">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Сотрудник недоступен:</label>
+                            <select id="absent-employee"></select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; color: #64748b;">Причина отсутствия:</label>
+                            <select id="absent-reason">
+                                <option value="Болезнь">Болезнь</option>
+                                <option value="Поломка автомобиля">Поломка автомобиля</option>
+                                <option value="Погодные условия">Погодные условия</option>
+                                <option value="Личные обстоятельства">Личные обстоятельства</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <label style="display: block; margin-bottom: 8px; color: #64748b;">День отсутствия:</label>
+                        <select id="absent-day">
+                            <option value="0">Понедельник</option>
+                            <option value="1">Вторник</option>
+                            <option value="2">Среда</option>
+                            <option value="3">Четверг</option>
+                            <option value="4">Пятница</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <label style="display: block; margin-bottom: 8px; color: #64748b;">Период действия инцидента:</label>
+                        <select id="incident-scope">
+                            <option value="single">Только выбранный день</option>
+                            <option value="rest">Выбранный день и все следующие</option>
+                        </select>
+                    </div>
+                    <div class="toolbar">
+                        <button class="btn btn-danger" onclick="simulateEmergency()">
+                            <span>⚠️</span> Активировать перераспределение
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetEmergencyEffects()">
+                            <span>↩️</span> Сбросить изменения
+                        </button>
+                    </div>
+                </div>
+
+                <div id="active-incidents" class="hidden"></div>
+                <div id="emergency-result" class="hidden"></div>
+            </div>
+        </div>
+
+        <div id="analytics" class="content-section">
+            <h2>📈 Аналитика и отчётность</h2>
+
+            <div id="analytics-no-data" class="alert alert-warning">
+                <span style="font-size: 1.5em;">⚠️</span>
+                <div>
+                    <strong>Нет данных для анализа</strong><br>
+                    Сначала постройте маршруты в разделе "Планирование"
+                </div>
+            </div>
+
+            <div id="analytics-content" class="hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-visits">0</div>
+                        <div class="stat-label">Всего визитов в неделю</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avg-time">0</div>
+                        <div class="stat-label">Среднее время на ТТ (мин)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="coverage-a">0%</div>
+                        <div class="stat-label">Охват категории А</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="efficiency">0</div>
+                        <div class="stat-label">Визитов на сотрудника/день</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="weekly-distance">0</div>
+                        <div class="stat-label">Км по маршрутам за неделю</div>
+                    </div>
+                </div>
+
+                <div class="two-columns">
+                    <div class="card">
+                        <h3>Распределение визитов по категориям</h3>
+                        <div id="category-chart" style="margin-top: 15px;"></div>
+                    </div>
+                    <div class="card">
+                        <h3>Загрузка по сотрудникам</h3>
+                        <div id="employee-load" style="margin-top: 15px;"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Эффективность маршрутов</h3>
+                    <div class="table-scroll comparison-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Показатель</th>
+                                    <th>До внедрения</th>
+                                    <th>После внедрения</th>
+                                    <th>Улучшение</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Время планирования</td>
+                                    <td>4 часа в неделю</td>
+                                    <td>5 минут</td>
+                        <td style="color: #21bff5; font-weight: bold;">-98%</td>
+                                </tr>
+                                <tr>
+                                    <td>Реакция на форс-мажор</td>
+                                    <td>2 часа</td>
+                                    <td>2 минуты</td>
+                        <td style="color: #21bff5; font-weight: bold;">-98%</td>
+                                </tr>
+                                <tr>
+                                    <td>Охват категории А</td>
+                                    <td>85%</td>
+                                    <td>100%</td>
+                        <td style="color: #ff4fa3; font-weight: bold;">+15%</td>
+                                </tr>
+                                <tr>
+                                    <td>Оптимальность маршрутов</td>
+                                    <td>Базовый уровень</td>
+                                    <td>+25% к оптимальности</td>
+                        <td style="color: #21bff5; font-weight: bold;">+25%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="exportReport()">
+                    <span>📥</span> Экспортировать отчёт (CSV)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ttData = [];
+        let schedule = null;
+        let baseSchedule = null;
+        let basePlanningMeta = { unassignedPoints: [] };
+        let employees = ["Иванов", "Петров", "Сидоров", "Кузнецов"];
+        let incidents = [];
+        let planningMeta = { unassignedPoints: [] };
+        const WORKDAY_MINUTES = 8 * 60;
+        const MAX_POINTS_PER_DAY = 8;
+        const ROUTE_START_MINUTE = 9 * 60;
+        const HQ_COORDS = { lat: 54.1838, lon: 45.1749, label: 'База' };
+        const EMPLOYEE_COLORS = ['#ff4fa3', '#5fd7ff', '#1b1e26', '#ff7ebb', '#21bff5', '#2d3140', '#ff9ccc', '#7be2ff'];
+        const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'];
+        const DAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
+        let districts = [
+            "г.о. Саранск", "Ардатовский", "Атюрьевский", "Атяшевский", "Большеберезниковский",
+            "Большеигнатовский", "Дубёнский", "Ельниковский", "Зубово-Полянский", "Инсарский",
+            "Ичалковский", "Кадошкинский", "Ковылкинский", "Кочкуровский", "Краснослободский",
+            "Лямбирский", "Ромодановский", "Рузаевский", "Старошайговский", "Темниковский",
+            "Теньгушевский", "Торбеевский", "Чамзинский"
+        ];
+
+        function deepClone(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        function showSection(sectionId, tabButton) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+            document.getElementById(sectionId).classList.add('active');
+            if (tabButton) {
+                tabButton.classList.add('active');
+            }
+
+            updateUIState();
+        }
+
+        function getDefaultsByCategory(category) {
+            return {
+                visitsPerMonth: category === 'A' ? 3 : category === 'B' ? 2 : category === 'C' ? 1 : 0.33,
+                timePerVisit: category === 'A' ? 45 : category === 'B' ? 30 : category === 'C' ? 20 : 15
+            };
+        }
+
+        function refreshEmployeeUI() {
+            document.getElementById('employee-names').value = employees.join('\n');
+            document.getElementById('planning-employee-tags').innerHTML = employees.length
+                ? employees.map(emp => `<span class="employee-tag" style="background:${getEmployeeColor(emp)};">${emp}</span>`).join('')
+                : '<span class="muted">Команда не задана</span>';
+            document.getElementById('employee-list-preview').innerHTML = employees.length
+                ? employees.map(emp => `<span class="employee-tag" style="background:${getEmployeeColor(emp)};">${emp}</span>`).join('')
+                : '<span class="muted">Добавьте хотя бы одного сотрудника</span>';
+            document.getElementById('absent-employee').innerHTML = employees.map(emp =>
+                `<option value="${emp}">${emp}</option>`
+            ).join('');
+        }
+
+        function refreshDistrictOptions() {
+            const districtOptions = [...new Set([...districts, ...ttData.map(tt => tt.district).filter(Boolean)])];
+            document.getElementById('district-options').innerHTML = districtOptions
+                .map(d => `<option value="${d}"></option>`).join('');
+        }
+
+        function saveEmployees() {
+            const values = document.getElementById('employee-names').value
+                .split('\n')
+                .map(v => v.trim())
+                .filter(Boolean);
+
+            if (!values.length) {
+                showNotification('⚠️ Укажите хотя бы одного сотрудника', 'warning');
+                return;
+            }
+
+            employees = values;
+            schedule = null;
+            baseSchedule = null;
+            basePlanningMeta = { unassignedPoints: [] };
+            incidents = [];
+            refreshEmployeeUI();
+            updateUIState();
+            showNotification('✅ Состав команды обновлён', 'success');
+        }
+
+        function addManualPoint() {
+            const name = document.getElementById('tt-name').value.trim();
+            const district = document.getElementById('tt-district').value.trim();
+            const category = document.getElementById('tt-category').value;
+            const visitsInput = document.getElementById('tt-visits').value;
+            const timeInput = document.getElementById('tt-time').value;
+            const latInput = document.getElementById('tt-lat').value;
+            const lonInput = document.getElementById('tt-lon').value;
+
+            if (!name || !district) {
+                showNotification('⚠️ Заполните название и район точки', 'warning');
+                return;
+            }
+
+            const defaults = getDefaultsByCategory(category);
+            const nextId = ttData.length ? Math.max(...ttData.map(tt => tt.id)) + 1 : 1;
+
+            ttData.push({
+                id: nextId,
+                name,
+                district,
+                category,
+                visitsPerMonth: visitsInput ? Number(visitsInput) : defaults.visitsPerMonth,
+                timePerVisit: timeInput ? Number(timeInput) : defaults.timePerVisit,
+                lat: latInput ? Number(latInput) : 54.18 + (Math.random() - 0.5) * 0.1,
+                lon: lonInput ? Number(lonInput) : 45.18 + (Math.random() - 0.5) * 0.1
+            });
+
+            if (!districts.includes(district)) {
+                districts.push(district);
+            }
+
+            ['tt-name', 'tt-district', 'tt-visits', 'tt-time', 'tt-lat', 'tt-lon'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('tt-category').value = 'A';
+
+            schedule = null;
+            baseSchedule = null;
+            basePlanningMeta = { unassignedPoints: [] };
+            incidents = [];
+            refreshDistrictOptions();
+            updateDataDisplay();
+            showNotification('✅ Торговая точка добавлена', 'success');
+        }
+
+        function generateData() {
+            ttData = [];
+            schedule = null;
+            baseSchedule = null;
+            basePlanningMeta = { unassignedPoints: [] };
+            incidents = [];
+            let id = 1;
+
+            const saranskCats = ['A','A','A','A','A','A','B','B','B','B','B','B','B','B','B',
+                                'C','C','C','C','C','C','D','D','D','D','D','D','D','D','D'];
+            saranskCats.forEach(cat => {
+                const defaults = getDefaultsByCategory(cat);
+                ttData.push({
+                    id: id,
+                    name: `ТТ-${String(id).padStart(3, '0')}`,
+                    district: "г.о. Саранск",
+                    category: cat,
+                    visitsPerMonth: defaults.visitsPerMonth,
+                    timePerVisit: defaults.timePerVisit,
+                    lat: 54.18 + (Math.random() - 0.5) * 0.1,
+                    lon: 45.18 + (Math.random() - 0.5) * 0.1
+                });
+                id++;
+            });
+
+            for (let d = 1; d < districts.length; d++) {
+                const distCats = ['A','A','B','B','B','C','C','D','D','D'];
+                distCats.forEach(cat => {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const distance = 0.3 + Math.random() * 0.9;
+                    const defaults = getDefaultsByCategory(cat);
+                    ttData.push({
+                        id: id,
+                        name: `ТТ-${String(id).padStart(3, '0')}`,
+                        district: districts[d],
+                        category: cat,
+                        visitsPerMonth: defaults.visitsPerMonth,
+                        timePerVisit: defaults.timePerVisit,
+                        lat: 54.18 + Math.cos(angle) * distance * 0.5,
+                        lon: 45.18 + Math.sin(angle) * distance * 0.8
+                    });
+                    id++;
+                });
+            }
+
+            refreshDistrictOptions();
+            updateDataDisplay();
+            showNotification('✅ Данные сгенерированы: 250 торговых точек', 'success');
+        }
+
+        function clearData() {
+            ttData = [];
+            schedule = null;
+            baseSchedule = null;
+            basePlanningMeta = { unassignedPoints: [] };
+            incidents = [];
+            refreshDistrictOptions();
+            updateDataDisplay();
+            updateUIState();
+            showNotification('🗑️ Данные очищены', 'info');
+        }
+
+        function updateDataDisplay() {
+            const hasData = ttData.length > 0;
+
+            document.getElementById('data-stats').classList.toggle('hidden', !hasData);
+            document.getElementById('no-data').classList.toggle('hidden', hasData);
+
+            if (hasData) {
+                const catCount = {A: 0, B: 0, C: 0, D: 0};
+                ttData.forEach(tt => catCount[tt.category]++);
+                const uniqueDistricts = new Set(ttData.map(tt => tt.district)).size;
+
+                document.getElementById('total-tt').textContent = ttData.length;
+                document.getElementById('total-districts').textContent = uniqueDistricts;
+                document.getElementById('cat-a').textContent = catCount.A;
+                document.getElementById('cat-d').textContent = catCount.D;
+
+                const total = ttData.length;
+                const pctA = Math.round(catCount.A / total * 100);
+                const pctB = Math.round(catCount.B / total * 100);
+                const pctC = Math.round(catCount.C / total * 100);
+                const pctD = Math.round(catCount.D / total * 100);
+
+                document.getElementById('progress-a').style.width = pctA + '%';
+                document.getElementById('progress-a').textContent = pctA + '%';
+                document.getElementById('label-a').textContent = catCount.A + ' ТТ';
+
+                document.getElementById('progress-b').style.width = pctB + '%';
+                document.getElementById('progress-b').textContent = pctB + '%';
+                document.getElementById('label-b').textContent = catCount.B + ' ТТ';
+
+                document.getElementById('progress-c').style.width = pctC + '%';
+                document.getElementById('progress-c').textContent = pctC + '%';
+                document.getElementById('label-c').textContent = catCount.C + ' ТТ';
+
+                document.getElementById('progress-d').style.width = pctD + '%';
+                document.getElementById('progress-d').textContent = pctD + '%';
+                document.getElementById('label-d').textContent = catCount.D + ' ТТ';
+
+                const tbody = document.getElementById('sample-tbody');
+                tbody.innerHTML = ttData.map(tt => `
+                    <tr>
+                        <td>${tt.id}</td>
+                        <td>${tt.name}</td>
+                        <td>${tt.district}</td>
+                        <td><span class="badge badge-${tt.category.toLowerCase()}">${tt.category}</span></td>
+                        <td>${tt.visitsPerMonth}</td>
+                        <td>${tt.timePerVisit} мин</td>
+                    </tr>
+                `).join('');
+            }
+
+            updateUIState();
+        }
+
+        function getPointPriority(point) {
+            return {A: 0, B: 1, C: 2, D: 3}[point.category] ?? 9;
+        }
+
+        function degToRad(value) {
+            return value * Math.PI / 180;
+        }
+
+        function calculateDistanceKm(from, to) {
+            const earthRadiusKm = 6371;
+            const dLat = degToRad(to.lat - from.lat);
+            const dLon = degToRad(to.lon - from.lon);
+            const lat1 = degToRad(from.lat);
+            const lat2 = degToRad(to.lat);
+
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return earthRadiusKm * c;
+        }
+
+        function getEmployeeColor(employee) {
+            const index = employees.indexOf(employee);
+            return EMPLOYEE_COLORS[index >= 0 ? index % EMPLOYEE_COLORS.length : 0];
+        }
+
+        function getTrafficFactorByMinute(minuteOfDay, dayIdx) {
+            const weekdayAdjustment = [1.08, 1.03, 1.0, 1.04, 1.12][dayIdx] || 1.04;
+
+            if (minuteOfDay >= 8 * 60 && minuteOfDay < 10 * 60) {
+                return 1.45 * weekdayAdjustment;
+            }
+
+            if (minuteOfDay >= 17 * 60 && minuteOfDay < 19 * 60) {
+                return 1.35 * weekdayAdjustment;
+            }
+
+            if (minuteOfDay >= 12 * 60 && minuteOfDay < 14 * 60) {
+                return 1.1 * weekdayAdjustment;
+            }
+
+            return 0.96 * weekdayAdjustment;
+        }
+
+        function getTrafficLabel(factor) {
+            if (factor >= 1.35) return 'Плотные пробки';
+            if (factor >= 1.18) return 'Умеренные пробки';
+            if (factor >= 1.02) return 'Трафик рабочий';
+            return 'Движение свободное';
+        }
+
+        function getTrafficColor(factor) {
+            if (factor >= 1.35) return '#ff2f8c';
+            if (factor >= 1.18) return '#0b0b0f';
+            if (factor >= 1.02) return '#21bff5';
+            return '#5fd7ff';
+        }
+
+        function enrichRouteMetrics(route, dayIdx) {
+            route.points = orderRoutePoints(route.points);
+            let totalDistanceKm = 0;
+            let travelMinutes = 0;
+            let previousPoint = HQ_COORDS;
+            let timeCursor = ROUTE_START_MINUTE;
+            let maxTrafficFactor = 0.96;
+
+            route.points.forEach(point => {
+                const distanceKm = calculateDistanceKm(previousPoint, point);
+                const segmentTrafficFactor = getTrafficFactorByMinute(timeCursor, dayIdx);
+                const segmentTravelMinutes = (distanceKm / 38) * 60 * segmentTrafficFactor;
+                totalDistanceKm += distanceKm;
+                travelMinutes += segmentTravelMinutes;
+                maxTrafficFactor = Math.max(maxTrafficFactor, segmentTrafficFactor);
+                timeCursor += Math.round(segmentTravelMinutes) + point.timePerVisit;
+                previousPoint = point;
+            });
+
+            if (route.points.length) {
+                const returnDistanceKm = calculateDistanceKm(previousPoint, HQ_COORDS);
+                const returnTrafficFactor = getTrafficFactorByMinute(timeCursor, dayIdx);
+                const returnTravelMinutes = (returnDistanceKm / 38) * 60 * returnTrafficFactor;
+                totalDistanceKm += returnDistanceKm;
+                travelMinutes += returnTravelMinutes;
+                maxTrafficFactor = Math.max(maxTrafficFactor, returnTrafficFactor);
+            }
+
+            route.serviceMinutes = route.points.reduce((sum, point) => sum + point.timePerVisit, 0);
+            route.totalDistanceKm = Math.round(totalDistanceKm * 10) / 10;
+            route.travelMinutes = Math.round(travelMinutes);
+            route.trafficFactor = Number(maxTrafficFactor.toFixed(2));
+            route.trafficLabel = getTrafficLabel(maxTrafficFactor);
+            route.trafficColor = getTrafficColor(maxTrafficFactor);
+            route.totalTime = route.serviceMinutes;
+            route.fullDayMinutes = route.serviceMinutes + route.travelMinutes;
+            route.pointsCount = route.points.length;
+            route.territoryLabel = getRouteTerritoryLabel(route.points);
+        }
+
+        function enrichScheduleMetricsForTarget(targetSchedule) {
+            if (!targetSchedule) return;
+
+            targetSchedule.forEach((day, dayIdx) => {
+                Object.values(day.routes).forEach(route => {
+                    enrichRouteMetrics(route, dayIdx);
+                });
+            });
+        }
+
+        function enrichScheduleMetrics() {
+            enrichScheduleMetricsForTarget(schedule);
+        }
+
+        function orderRoutePoints(points) {
+            if (points.length < 3) {
+                return [...points];
+            }
+
+            const remaining = [...points];
+            const ordered = [];
+            let previous = HQ_COORDS;
+
+            while (remaining.length) {
+                remaining.sort((a, b) => calculateDistanceKm(previous, a) - calculateDistanceKm(previous, b));
+                const nextPoint = remaining.shift();
+                ordered.push(nextPoint);
+                previous = nextPoint;
+            }
+
+            return ordered;
+        }
+
+        function getRouteTerritoryLabel(points) {
+            const uniqueDistricts = [...new Set(points.map(point => point.district).filter(Boolean))];
+            if (!uniqueDistricts.length) return 'Маршрут не назначен';
+            if (uniqueDistricts.length === 1) return uniqueDistricts[0];
+            if (uniqueDistricts.length === 2) return uniqueDistricts.join(' • ');
+            return `${uniqueDistricts.slice(0, 2).join(' • ')} +${uniqueDistricts.length - 2}`;
+        }
+
+        function createEmptyRoute(employee) {
+            return {
+                employee,
+                points: [],
+                pointsCount: 0,
+                totalTime: 0,
+                serviceMinutes: 0,
+                travelMinutes: 0,
+                fullDayMinutes: 0,
+                totalDistanceKm: 0,
+                trafficFactor: 0.96,
+                trafficLabel: getTrafficLabel(0.96),
+                trafficColor: getTrafficColor(0.96),
+                territoryLabel: 'Маршрут не назначен',
+                unavailable: false,
+                incidentReason: ''
+            };
+        }
+
+        function buildEmptySchedule(startDate) {
+            const newSchedule = [];
+
+            for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + dayIdx);
+
+                const daySchedule = {
+                    day: DAYS[dayIdx],
+                    dayShort: DAYS_SHORT[dayIdx],
+                    date: currentDate.toLocaleDateString('ru-RU'),
+                    routes: {},
+                    incidents: []
+                };
+
+                employees.forEach(employee => {
+                    daySchedule.routes[employee] = createEmptyRoute(employee);
+                });
+
+                newSchedule.push(daySchedule);
+            }
+
+            return newSchedule;
+        }
+
+        function getProjectedRouteMetrics(route, point, dayIdx) {
+            if (route.pointsCount >= MAX_POINTS_PER_DAY) {
+                return null;
+            }
+
+            const projectedRoute = {
+                ...route,
+                points: [...route.points, point]
+            };
+
+            enrichRouteMetrics(projectedRoute, dayIdx);
+            return projectedRoute.fullDayMinutes <= WORKDAY_MINUTES ? projectedRoute : null;
+        }
+
+        function getCandidateScore(route, point, dayIdx, projectedRoute, startDayIdx) {
+            const sameDistrictCount = route.points.filter(existing => existing.district === point.district).length;
+            const dayOffset = Math.max(0, dayIdx - startDayIdx);
+            return projectedRoute.fullDayMinutes +
+                projectedRoute.travelMinutes * 0.6 +
+                route.pointsCount * 8 -
+                sameDistrictCount * 18 +
+                dayOffset * 22;
+        }
+
+        function placePointInSchedule(targetSchedule, point, startDayIdx = 0, excludedEmployees = []) {
+            let bestFit = null;
+
+            for (let dayIdx = startDayIdx; dayIdx < targetSchedule.length; dayIdx++) {
+                const routes = Object.values(targetSchedule[dayIdx].routes)
+                    .filter(route => !route.unavailable && !excludedEmployees.includes(route.employee));
+
+                routes.forEach(route => {
+                    const projectedRoute = getProjectedRouteMetrics(route, point, dayIdx);
+                    if (!projectedRoute) {
+                        return;
+                    }
+
+                    const score = getCandidateScore(route, point, dayIdx, projectedRoute, startDayIdx);
+                    if (!bestFit || score < bestFit.score) {
+                        bestFit = {
+                            score,
+                            dayIdx,
+                            employee: route.employee,
+                            route: projectedRoute
+                        };
+                    }
+                });
+            }
+
+            if (!bestFit) {
+                return null;
+            }
+
+            targetSchedule[bestFit.dayIdx].routes[bestFit.employee] = bestFit.route;
+            return {
+                dayIdx: bestFit.dayIdx,
+                employee: bestFit.employee
+            };
+        }
+
+        function findSwapPlacementForHighPriorityPoint(targetSchedule, point, startDayIdx = 0, excludedEmployees = []) {
+            if (getPointPriority(point) !== 0) {
+                return null;
+            }
+
+            let bestSwap = null;
+
+            for (let dayIdx = startDayIdx; dayIdx < targetSchedule.length; dayIdx++) {
+                const routes = Object.values(targetSchedule[dayIdx].routes)
+                    .filter(route => !route.unavailable && !excludedEmployees.includes(route.employee));
+
+                routes.forEach(route => {
+                    const removablePoints = [...route.points]
+                        .filter(candidate => getPointPriority(candidate) > getPointPriority(point))
+                        .sort((a, b) => {
+                            const priorityDiff = getPointPriority(b) - getPointPriority(a);
+                            if (priorityDiff !== 0) return priorityDiff;
+                            return b.timePerVisit - a.timePerVisit;
+                        });
+
+                    const displacedCandidates = [];
+                    let projectedRoute = getProjectedRouteMetrics(route, point, dayIdx);
+
+                    for (const candidateToRemove of removablePoints) {
+                        if (projectedRoute) {
+                            break;
+                        }
+
+                        displacedCandidates.push(candidateToRemove);
+                        const displacedIds = new Set(displacedCandidates.map(candidate => candidate.id));
+                        const trimmedRoute = {
+                            ...route,
+                            points: route.points.filter(existing => !displacedIds.has(existing.id))
+                        };
+
+                        enrichRouteMetrics(trimmedRoute, dayIdx);
+                        projectedRoute = getProjectedRouteMetrics(trimmedRoute, point, dayIdx);
+                    }
+
+                    if (!projectedRoute) {
+                        return;
+                    }
+
+                    const swapPenalty = displacedCandidates.reduce((sum, candidate) =>
+                        sum + getPointPriority(candidate) * 160 + candidate.timePerVisit,
+                    0);
+                    const displacedIds = new Set(displacedCandidates.map(candidate => candidate.id));
+                    const trimmedRoute = {
+                        ...route,
+                        points: route.points.filter(existing => !displacedIds.has(existing.id))
+                    };
+                    const score = getCandidateScore(trimmedRoute, point, dayIdx, projectedRoute, startDayIdx) +
+                        swapPenalty +
+                        displacedCandidates.length * 40;
+
+                    if (!bestSwap || score < bestSwap.score) {
+                        bestSwap = {
+                            score,
+                            dayIdx,
+                            employee: route.employee,
+                            route: projectedRoute,
+                            displacedPoints: displacedCandidates
+                        };
+                    }
+                });
+            }
+
+            if (!bestSwap) {
+                return null;
+            }
+
+            targetSchedule[bestSwap.dayIdx].routes[bestSwap.employee] = bestSwap.route;
+            return {
+                dayIdx: bestSwap.dayIdx,
+                employee: bestSwap.employee,
+                displacedPoints: bestSwap.displacedPoints
+            };
+        }
+
+        function tryPlaceRedistributedPoint(point, startDayIdx, excludedEmployees = []) {
+            const directPlacement = placePointInSchedule(schedule, point, startDayIdx, excludedEmployees);
+            if (directPlacement) {
+                return {
+                    placement: directPlacement,
+                    displacedPoints: [],
+                    swapUsed: false
+                };
+            }
+
+            const swapPlacement = findSwapPlacementForHighPriorityPoint(schedule, point, startDayIdx, excludedEmployees);
+            if (!swapPlacement) {
+                return null;
+            }
+
+            return {
+                placement: {
+                    dayIdx: swapPlacement.dayIdx,
+                    employee: swapPlacement.employee
+                },
+                displacedPoints: swapPlacement.displacedPoints || [],
+                swapUsed: true
+            };
+        }
+
+        function sortPointsForPlanning(points) {
+            return [...points].sort((a, b) => {
+                const priorityDiff = getPointPriority(a) - getPointPriority(b);
+                if (priorityDiff !== 0) return priorityDiff;
+
+                if (b.visitsPerMonth !== a.visitsPerMonth) {
+                    return b.visitsPerMonth - a.visitsPerMonth;
+                }
+
+                if (b.timePerVisit !== a.timePerVisit) {
+                    return b.timePerVisit - a.timePerVisit;
+                }
+
+                return calculateDistanceKm(HQ_COORDS, a) - calculateDistanceKm(HQ_COORDS, b);
+            });
+        }
+
+        function renderPlanningSummary() {
+            const summary = document.getElementById('schedule-summary');
+            if (!summary || !schedule) {
+                return;
+            }
+
+            const assignedPoints = schedule.flatMap(day => Object.values(day.routes).flatMap(route => route.points));
+            const assignedIds = new Set(assignedPoints.map(point => point.id));
+            const unassignedByCategory = { A: 0, B: 0, C: 0, D: 0 };
+            planningMeta.unassignedPoints.forEach(point => {
+                unassignedByCategory[point.category] = (unassignedByCategory[point.category] || 0) + 1;
+            });
+
+            summary.innerHTML = `
+                <div class="card" style="border-left-color: ${planningMeta.unassignedPoints.length ? '#ff4fa3' : '#21bff5'};">
+                    <h3 style="margin-top: 0;">Итог недельного распределения</h3>
+                    <div class="small-note">
+                        В расписание попало ${assignedIds.size} из ${ttData.length} торговых точек.
+                        Лимит на маршрут: до ${MAX_POINTS_PER_DAY} ТТ и до ${WORKDAY_MINUTES} минут полной занятости в день.
+                    </div>
+                    <div class="legend-list" style="margin-top: 18px;">
+                        <div class="legend-item"><div>Категория A в плане</div><strong>${assignedPoints.filter(point => point.category === 'A').length}</strong></div>
+                        <div class="legend-item"><div>Незапланированные точки A</div><strong style="color:${unassignedByCategory.A ? '#ff2f8c' : '#21bff5'};">${unassignedByCategory.A}</strong></div>
+                        <div class="legend-item"><div>Незапланированные точки B/C/D</div><strong>${unassignedByCategory.B + unassignedByCategory.C + unassignedByCategory.D}</strong></div>
+                    </div>
+                    ${planningMeta.unassignedPoints.length ? `
+                        <div class="small-note" style="margin-top: 14px; color: #92400e;">
+                            Часть точек оставлена вне плана, потому что не помещается в неделю без нарушения лимита по времени или количеству визитов.
+                            Низкоприоритетные категории вытесняются раньше, чем категория A.
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function optimizeRoutes() {
+            if (!ttData.length) {
+                showNotification('⚠️ Сначала добавьте торговые точки', 'warning');
+                return;
+            }
+
+            if (!employees.length) {
+                showNotification('⚠️ Сначала задайте сотрудников', 'warning');
+                return;
+            }
+
+            document.getElementById('optimization-loading').classList.remove('hidden');
+            document.getElementById('schedule-result').classList.add('hidden');
+
+            setTimeout(() => {
+                const startDateInput = document.getElementById('start-date').value;
+                const startDate = startDateInput ? new Date(startDateInput) : new Date();
+
+                schedule = buildEmptySchedule(startDate);
+                incidents = [];
+                planningMeta = { unassignedPoints: [] };
+
+                const sortedPoints = sortPointsForPlanning(ttData);
+                sortedPoints.forEach(point => {
+                    const scheduledPoint = { ...point, status: 'planned' };
+                    const placement = placePointInSchedule(schedule, scheduledPoint);
+                    if (!placement) {
+                        planningMeta.unassignedPoints.push({
+                            ...point,
+                            reason: 'Не помещается в неделю при лимите 8 часов / 8 ТТ'
+                        });
+                    }
+                });
+
+                baseSchedule = deepClone(schedule);
+                basePlanningMeta = deepClone(planningMeta);
+                enrichScheduleMetricsForTarget(schedule);
+                baseSchedule = deepClone(schedule);
+                basePlanningMeta = deepClone(planningMeta);
+                document.getElementById('optimization-loading').classList.add('hidden');
+                document.getElementById('schedule-result').classList.remove('hidden');
+                displaySchedule();
+                updateUIState();
+                showNotification('✅ Маршруты пересчитаны с ограничением 8 часов и приоритетом A', 'success');
+            }, 600);
+        }
+
+        function recalculateRouteMeta(route, dayIdx) {
+            enrichRouteMetrics(route, dayIdx);
+        }
+
+        function formatIncidentScope(scope) {
+            return scope === 'rest' ? 'с выбранного дня до конца недели' : 'только выбранный день';
+        }
+
+        function renderIncidentBanner() {
+            const banner = document.getElementById('planning-incident-banner');
+            if (!incidents.length) {
+                banner.classList.add('hidden');
+                banner.innerHTML = '';
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            banner.innerHTML = `
+                <div class="alert alert-warning">
+                    <span style="font-size: 1.5em;">⚠️</span>
+                    <div>
+                        <strong>В планировании учтены форс-мажоры</strong><br>
+                        ${incidents.map(i => `${i.day}: ${i.employee} (${i.reason}, ${formatIncidentScope(i.scope)})`).join(' • ')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderActiveIncidents() {
+            const container = document.getElementById('active-incidents');
+            if (!incidents.length) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="card">
+                    <h3>Активные инциденты</h3>
+                    ${incidents.map((incident, index) => `
+                        <div class="flow-step" style="margin-top: 10px;">
+                            <div class="flow-number">${index + 1}</div>
+                            <div>
+                                <strong>${incident.employee}</strong> • ${incident.day}<br>
+                                <span class="muted">${incident.reason}, ${formatIncidentScope(incident.scope)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function applySingleIncident(incident) {
+            const dayIndexes = incident.scope === 'rest'
+                ? Array.from({ length: schedule.length - incident.dayIdx }, (_, offset) => incident.dayIdx + offset)
+                : [incident.dayIdx];
+
+            const summaries = [];
+
+            dayIndexes.forEach(dayIdx => {
+                const day = schedule[dayIdx];
+                const absentRoute = day.routes[incident.employee];
+                if (!absentRoute || absentRoute.unavailable) {
+                    return;
+                }
+
+                const pointsToRedistribute = [...absentRoute.points];
+                const otherEmps = employees.filter(e => e !== incident.employee);
+                const redistribution = {};
+                otherEmps.forEach(e => redistribution[e] = []);
+                const deferredPoints = [];
+                const displacedPoints = [];
+
+                if (!pointsToRedistribute.length) {
+                    absentRoute.unavailable = true;
+                    absentRoute.incidentReason = incident.reason;
+                    day.incidents.push({ employee: incident.employee, reason: incident.reason, scope: incident.scope });
+                    summaries.push({
+                        day: day.day,
+                        date: day.date,
+                        employee: incident.employee,
+                        redistributedCount: 0,
+                        redistribution,
+                        deferredPoints,
+                        displacedPoints
+                    });
+                    return;
+                }
+
+                const sortedPoints = [...pointsToRedistribute].sort((a, b) =>
+                    getPointPriority(a) - getPointPriority(b)
+                );
+
+                sortedPoints.forEach(point => {
+                    const redistributedPoint = {
+                        ...point,
+                        status: 'redistributed',
+                        originalEmployee: incident.employee
+                    };
+
+                    const placementResult = tryPlaceRedistributedPoint(redistributedPoint, dayIdx, [incident.employee]);
+
+                    if (!placementResult) {
+                        deferredPoints.push(redistributedPoint);
+                        planningMeta.unassignedPoints.push({
+                            ...redistributedPoint,
+                            reason: `Не удалось перераспределить после инцидента: ${incident.employee}`
+                        });
+                        return;
+                    }
+
+                    (placementResult.displacedPoints || []).forEach(candidate => {
+                        const displacedPoint = {
+                            ...candidate,
+                            status: 'planned'
+                        };
+                        const displacedReassignment = placePointInSchedule(
+                            schedule,
+                            displacedPoint,
+                            placementResult.placement.dayIdx,
+                            [incident.employee]
+                        );
+
+                        displacedPoints.push({
+                            ...displacedPoint,
+                            replacedBy: redistributedPoint.name,
+                            assignedDay: displacedReassignment ? schedule[displacedReassignment.dayIdx].day : '',
+                            assignedEmployee: displacedReassignment ? displacedReassignment.employee : ''
+                        });
+
+                        if (!displacedReassignment) {
+                            deferredPoints.push(displacedPoint);
+                            planningMeta.unassignedPoints.push({
+                                ...displacedPoint,
+                                reason: `Вытеснена точкой категории A: ${redistributedPoint.name}`
+                            });
+                        }
+                    });
+
+                    redistribution[placementResult.placement.employee].push({
+                        ...redistributedPoint,
+                        assignedDay: schedule[placementResult.placement.dayIdx].day,
+                        swapUsed: placementResult.swapUsed
+                    });
+                });
+
+                absentRoute.points = [];
+                absentRoute.unavailable = true;
+                absentRoute.incidentReason = incident.reason;
+                recalculateRouteMeta(absentRoute, dayIdx);
+                day.incidents.push({ employee: incident.employee, reason: incident.reason, scope: incident.scope });
+                summaries.push({
+                    day: day.day,
+                    date: day.date,
+                    employee: incident.employee,
+                    redistributedCount: pointsToRedistribute.length,
+                    redistribution,
+                    deferredPoints,
+                    displacedPoints
+                });
+            });
+
+            return summaries;
+        }
+
+        function reapplyIncidents() {
+            if (!baseSchedule) {
+                return [];
+            }
+
+            schedule = deepClone(baseSchedule);
+            planningMeta = deepClone(basePlanningMeta);
+            const summaries = incidents.map(incident => ({
+                ...incident,
+                appliedDays: applySingleIncident(incident) || []
+            }));
+            enrichScheduleMetricsForTarget(schedule);
+            displaySchedule();
+            updateAnalytics();
+            renderActiveIncidents();
+            return summaries;
+        }
+
+        function renderRouteMap() {
+            const mapStage = document.getElementById('route-map');
+            const svg = document.getElementById('route-map-svg');
+            const summary = document.getElementById('map-summary');
+            const legend = document.getElementById('map-legend');
+
+            if (!mapStage || !svg || !summary || !legend) {
+                return;
+            }
+
+            mapStage.querySelectorAll('.map-node, .map-label').forEach(node => node.remove());
+            svg.innerHTML = '';
+
+            if (!schedule) {
+                summary.innerHTML = '<div class="muted">Постройте маршруты, чтобы отобразить карту.</div>';
+                legend.innerHTML = '';
+                return;
+            }
+
+            const dayIdx = Number(document.getElementById('map-day-select')?.value || 0);
+            const day = schedule[dayIdx];
+            if (!day) {
+                return;
+            }
+
+            const allPoints = [HQ_COORDS, ...Object.values(day.routes).flatMap(route => route.points)];
+            if (!allPoints.length) {
+                return;
+            }
+
+            const latValues = allPoints.map(point => point.lat);
+            const lonValues = allPoints.map(point => point.lon);
+            const minLat = Math.min(...latValues);
+            const maxLat = Math.max(...latValues);
+            const minLon = Math.min(...lonValues);
+            const maxLon = Math.max(...lonValues);
+
+            const projectPoint = point => {
+                const x = ((point.lon - minLon) / ((maxLon - minLon) || 1)) * 86 + 7;
+                const y = ((maxLat - point.lat) / ((maxLat - minLat) || 1)) * 78 + 10;
+                return { x, y };
+            };
+
+            let totalDistance = 0;
+            let totalTravel = 0;
+            const legendRows = [];
+
+            Object.values(day.routes).forEach(route => {
+                if (!route.points.length) return;
+                const color = getEmployeeColor(route.employee);
+                totalDistance += route.totalDistanceKm || 0;
+                totalTravel += route.travelMinutes || 0;
+
+                const pathPoints = [HQ_COORDS, ...route.points, HQ_COORDS].map(projectPoint);
+                const pathData = pathPoints.map((point, index) =>
+                    `${index === 0 ? 'M' : 'L'} ${point.x * 10} ${point.y * 6}`
+                ).join(' ');
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '5');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-dasharray', route.unavailable ? '10 8' : '0');
+                path.setAttribute('opacity', '0.9');
+                svg.appendChild(path);
+
+                route.points.forEach((point, idx) => {
+                    const projected = projectPoint(point);
+                    const pointNode = document.createElement('div');
+                    pointNode.className = `map-node stop-${point.category.toLowerCase()}`;
+                    pointNode.style.left = `${projected.x}%`;
+                    pointNode.style.top = `${projected.y}%`;
+                    mapStage.appendChild(pointNode);
+
+                    const label = document.createElement('div');
+                    label.className = 'map-label';
+                    label.style.left = `${projected.x}%`;
+                    label.style.top = `${projected.y}%`;
+                    label.textContent = `${route.employee}: ${idx + 1}`;
+                    mapStage.appendChild(label);
+                });
+
+                legendRows.push(`
+                    <div class="legend-item">
+                        <div><span class="legend-dot" style="background:${color};"></span>${route.employee}</div>
+                        <div class="muted">${route.totalDistanceKm || 0} км • ${route.travelMinutes || 0} мин</div>
+                    </div>
+                `);
+            });
+
+            const hubProjection = projectPoint(HQ_COORDS);
+            const hubNode = document.createElement('div');
+            hubNode.className = 'map-node hub';
+            hubNode.style.left = `${hubProjection.x}%`;
+            hubNode.style.top = `${hubProjection.y}%`;
+            mapStage.appendChild(hubNode);
+
+            const hubLabel = document.createElement('div');
+            hubLabel.className = 'map-label';
+            hubLabel.style.left = `${hubProjection.x}%`;
+            hubLabel.style.top = `${hubProjection.y}%`;
+            hubLabel.textContent = HQ_COORDS.label;
+            mapStage.appendChild(hubLabel);
+
+            const dayFactors = [9 * 60, 13 * 60, 18 * 60].map(minute => getTrafficFactorByMinute(minute, dayIdx));
+            const factor = Math.max(...dayFactors);
+            summary.innerHTML = `
+                <div class="traffic-chip" style="background:${getTrafficColor(factor)}15; color:${getTrafficColor(factor)};">
+                    <span style="width:10px; height:10px; border-radius:50%; background:${getTrafficColor(factor)};"></span>
+                    ${getTrafficLabel(factor)}
+                </div>
+                <div class="small-note" style="margin-top: 12px;">
+                    ${day.day}: ${Math.round(totalDistance)} км по маршрутам, около ${Math.round(totalTravel)} мин на дорогу.
+                </div>
+                <div class="small-note">Пробки рассчитываются автоматически по времени выхода на маршрут и обратного возврата.</div>
+            `;
+            legend.innerHTML = legendRows.join('') || '<div class="muted">На выбранный день нет активных маршрутов.</div>';
+        }
+
+        function displaySchedule() {
+            const container = document.getElementById('schedule-container');
+            renderIncidentBanner();
+            renderPlanningSummary();
+
+            container.innerHTML = schedule.map(day => `
+                <div class="route-day">
+                    <h3>${day.day} (${day.date})</h3>
+                    ${Object.values(day.routes).map(route => `
+                        <div class="employee-route" style="${route.unavailable ? 'border-left: 4px solid #ff2f8c;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
+                                <div>
+                                    <strong style="font-size: 1.1em;">${route.employee}</strong>
+                                    <span style="color: #64748b; margin-left: 10px;">→ ${route.territoryLabel || 'Маршрут не назначен'}</span>
+                                    ${route.unavailable ? `<span class="badge badge-unavailable" style="margin-left: 10px;">Недоступен</span>` : ''}
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="color: #64748b;">${route.pointsCount} точек</span>
+                                    <span style="color: #64748b; margin-left: 15px;">${Math.floor((route.fullDayMinutes || 0)/60)}ч ${(route.fullDayMinutes || 0)%60}м</span>
+                                </div>
+                            </div>
+                            <div class="small-note">
+                                Сервис на точках: ${route.serviceMinutes || 0} мин • Дорога: ${route.travelMinutes || 0} мин
+                            </div>
+                            <div class="small-note">
+                                Длина пути: ${route.totalDistanceKm || 0} км • В пути: ${route.travelMinutes || 0} мин •
+                                <span style="color:${route.trafficColor || '#64748b'}; font-weight:600;">${route.trafficLabel || 'Трафик не рассчитан'}</span>
+                                • Полная занятость: ${route.fullDayMinutes || route.totalTime} мин
+                            </div>
+                            ${route.unavailable && route.incidentReason ? `<div class="small-note">Причина: ${route.incidentReason}. Точки перераспределены между доступными сотрудниками.</div>` : ''}
+                            ${route.points.length > 0 ? `
+                                <div class="table-scroll">
+                                    <table style="margin: 12px 0 0; font-size: 0.9em;">
+                                        <thead>
+                                            <tr>
+                                                <th>ТТ</th>
+                                                <th>Кат</th>
+                                                <th>Район</th>
+                                                <th>Время</th>
+                                                <th>Статус</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${route.points.map((p, idx) => `
+                                                <tr>
+                                                    <td>${idx + 1}. ${p.name}</td>
+                                                    <td><span class="badge badge-${p.category.toLowerCase()}">${p.category}</span></td>
+                                                    <td>${p.district}</td>
+                                                    <td>${p.timePerVisit} мин</td>
+                                                    <td>${p.status === 'redistributed'
+                                                        ? '<span class="badge badge-incident">Перенесено</span>'
+                                                        : '🟡 Запланировано'}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ` : '<p style="color: #64748b; margin: 12px 0 0;">Нет запланированных визитов на этот день</p>'}
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            renderRouteMap();
+        }
+
+        function simulateEmergency() {
+            if (!schedule || !baseSchedule) {
+                showNotification('⚠️ Сначала постройте маршруты', 'warning');
+                return;
+            }
+
+            if (employees.length < 2) {
+                showNotification('⚠️ Для перераспределения нужны минимум два сотрудника', 'warning');
+                return;
+            }
+
+            const emp = document.getElementById('absent-employee').value;
+            const reason = document.getElementById('absent-reason').value;
+            const dayIdx = parseInt(document.getElementById('absent-day').value, 10);
+            const scope = document.getElementById('incident-scope').value;
+            const day = schedule[dayIdx];
+
+            const resultDiv = document.getElementById('emergency-result');
+            resultDiv.classList.remove('hidden');
+
+            const duplicate = incidents.some(incident =>
+                incident.employee === emp &&
+                incident.dayIdx === dayIdx &&
+                incident.scope === scope
+            );
+
+            if (duplicate) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <span style="font-size: 1.5em;">ℹ️</span>
+                        <div>
+                            <strong>Такой инцидент уже добавлен</strong><br>
+                            Выберите другой день, сотрудника или период действия
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            incidents.push({
+                employee: emp,
+                reason,
+                dayIdx,
+                day: day.day,
+                scope
+            });
+
+            const appliedIncident = reapplyIncidents().at(-1);
+            const totalRedistributed = appliedIncident.appliedDays.reduce((sum, item) => sum + item.redistributedCount, 0);
+            const totalA = appliedIncident.appliedDays.reduce((sum, item) => {
+                const points = Object.values(item.redistribution).flat();
+                return sum + points.filter(p => p.category === 'A').length;
+            }, 0);
+
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <span style="font-size: 1.5em;">🚨</span>
+                    <div>
+                        <strong>Инцидент: ${emp} недоступен (${reason})</strong><br>
+                        Период: ${formatIncidentScope(scope)} • Старт: ${day.day}<br>
+                        Точек перераспределено: ${totalRedistributed}
+                        ${totalA > 0 ? `<br><span style="color: #ff2f8c;">⚠️ Внимание: ${totalA} точек категории А (высокий приоритет)!</span>` : ''}
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>Результат автоматического перераспределения:</h3>
+                    ${appliedIncident.appliedDays.map(daySummary => `
+                        <div class="card" style="border-left-color: #5fd7ff;">
+                            <strong>${daySummary.day} (${daySummary.date})</strong><br>
+                            <span class="muted">Перераспределено точек: ${daySummary.redistributedCount}</span>
+                            ${Object.entries(daySummary.redistribution).map(([targetEmp, points]) => {
+                        if (points.length === 0) return '';
+                        const empACount = points.filter(p => p.category === 'A').length;
+                        return `
+                            <div class="card" style="border-left-color: #21bff5; margin: 15px 0 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;">
+                                    <strong style="color: #21bff5; font-size: 1.1em;">${targetEmp}</strong>
+                                    <span>+${points.length} точек ${empACount > 0 ? `<span class="badge badge-a">${empACount} кат. А</span>` : ''}</span>
+                                </div>
+                                <ul style="margin: 0; padding-left: 20px;">
+                                    ${points.map(p => `
+                                        <li style="margin-bottom: 5px;">
+                                            ${p.name}
+                                            <span class="badge badge-${p.category.toLowerCase()}">${p.category}</span>
+                                            <span style="color: #64748b; margin-left: 10px;">${p.district}</span>
+                                            ${p.assignedDay && p.assignedDay !== daySummary.day ? `<span style="color: #2563eb; margin-left: 10px;">→ ${p.assignedDay}</span>` : ''}
+                                            ${p.swapUsed ? `<span style="color: #92400e; margin-left: 10px;">заменила менее приоритетную точку</span>` : ''}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }).join('')}
+                            ${daySummary.displacedPoints.length ? `
+                                <div class="card" style="border-left-color: #ff4fa3; margin-top: 15px;">
+                                    <strong style="color: #92400e;">Вытесненные менее приоритетные точки</strong>
+                                    <ul style="margin: 12px 0 0; padding-left: 20px;">
+                                        ${daySummary.displacedPoints.map(p => `
+                                            <li style="margin-bottom: 6px;">
+                                                ${p.name}
+                                                <span class="badge badge-${p.category.toLowerCase()}">${p.category}</span>
+                                                <span style="color: #64748b; margin-left: 10px;">заменена точкой ${p.replacedBy}</span>
+                                                ${p.assignedDay ? `<span style="color: #2563eb; margin-left: 10px;">→ ${p.assignedDay}, ${p.assignedEmployee}</span>` : '<span style="color: #b45309; margin-left: 10px;">не удалось перепланировать</span>'}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${daySummary.deferredPoints.length ? `
+                                <div class="alert alert-warning" style="margin-top: 15px;">
+                                    <span style="font-size: 1.2em;">⚠️</span>
+                                    <div>
+                                        ${daySummary.deferredPoints.length} точек не удалось встроить без нарушения лимита 8 часов / 8 ТТ.
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="alert alert-success" style="margin-top: 20px;">
+                    <span style="font-size: 1.5em;">✅</span>
+                    <div>
+                        <strong>Перераспределение выполнено!</strong><br>
+                        Изменения уже отражены во вкладке "Планирование" и в аналитике. Можно добавлять несколько инцидентов подряд.
+                    </div>
+                </div>
+            `;
+        }
+
+        function resetEmergencyEffects() {
+            if (!baseSchedule) {
+                showNotification('ℹ️ Сбрасывать пока нечего', 'info');
+                return;
+            }
+
+            schedule = deepClone(baseSchedule);
+            planningMeta = deepClone(basePlanningMeta);
+            incidents = [];
+            renderActiveIncidents();
+            document.getElementById('emergency-result').classList.add('hidden');
+            document.getElementById('emergency-result').innerHTML = '';
+            enrichScheduleMetricsForTarget(schedule);
+            displaySchedule();
+            updateAnalytics();
+            showNotification('✅ Форс-мажорные изменения сброшены', 'success');
+        }
+
+        function updateAnalytics() {
+            if (!schedule) return;
+
+            let totalVisits = 0;
+            let totalServiceTime = 0;
+            let totalDistance = 0;
+            const catCount = {A: 0, B: 0, C: 0, D: 0};
+            const empLoad = {};
+            const empMinutes = {};
+            employees.forEach(e => empLoad[e] = 0);
+            employees.forEach(e => empMinutes[e] = 0);
+
+            schedule.forEach(day => {
+                Object.values(day.routes).forEach(route => {
+                    totalVisits += route.pointsCount;
+                    totalServiceTime += route.serviceMinutes || 0;
+                    totalDistance += route.totalDistanceKm || 0;
+                    empMinutes[route.employee] += route.fullDayMinutes || 0;
+                    route.points.forEach(p => {
+                        catCount[p.category]++;
+                        empLoad[route.employee]++;
+                    });
+                });
+            });
+
+            document.getElementById('total-visits').textContent = totalVisits;
+            document.getElementById('avg-time').textContent = totalVisits > 0 ? Math.round(totalServiceTime / totalVisits) : 0;
+
+            const totalA = ttData.filter(tt => tt.category === 'A').length;
+            const coveredA = catCount.A;
+            const coverageAPct = totalA > 0 ? Math.round(coveredA / totalA * 100) : 0;
+            document.getElementById('coverage-a').textContent = coverageAPct + '%';
+            document.getElementById('coverage-a').style.color = coverageAPct >= 100 ? '#21bff5' : '#ff4fa3';
+
+            document.getElementById('efficiency').textContent = employees.length
+                ? (totalVisits / 5 / employees.length).toFixed(1)
+                : '0';
+            document.getElementById('weekly-distance').textContent = Math.round(totalDistance);
+
+            document.getElementById('category-chart').innerHTML = ['A', 'B', 'C', 'D'].map(cat => {
+                const colors = {
+                    A: 'linear-gradient(135deg, #ff4fa3 0%, #ff2f8c 100%)',
+                    B: 'linear-gradient(135deg, #5fd7ff 0%, #21bff5 100%)',
+                    C: 'linear-gradient(135deg, #1b1e26 0%, #373b4c 100%)',
+                    D: 'linear-gradient(135deg, #b7efff 0%, #7be2ff 100%)'
+                };
+                const pct = totalVisits > 0 ? Math.round(catCount[cat] / totalVisits * 100) : 0;
+                return `
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600;">Категория ${cat}</span>
+                            <strong>${catCount[cat]} визитов (${pct}%)</strong>
+                        </div>
+                        <div class="progress-bar" style="height: 35px;">
+                            <div class="progress-fill" style="width: ${pct}%; background: ${colors[cat]}; font-size: 1em;">
+                                ${catCount[cat] > 0 ? catCount[cat] : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const maxLoad = Math.max(...Object.values(empLoad), 0);
+            document.getElementById('employee-load').innerHTML = Object.entries(empLoad).map(([emp, count]) => {
+                const pct = maxLoad > 0 ? (count / maxLoad * 100) : 0;
+                return `
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600;">${emp}</span>
+                            <strong>${count} визитов</strong>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${pct}%; font-size: 0.9em; background: linear-gradient(135deg, ${getEmployeeColor(emp)} 0%, ${getEmployeeColor(emp)}cc 100%);">
+                                ${count > 0 ? count : ''}
+                            </div>
+                        </div>
+                        <div class="small-note">Средняя занятость в день: ${Math.round((empMinutes[emp] || 0) / 5)} мин</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportReport() {
+            if (!schedule) {
+                showNotification('⚠️ Сначала постройте маршруты', 'warning');
+                return;
+            }
+
+            let csv = 'День,Дата,Сотрудник,Район,ТТ_ID,ТТ_Название,Категория,Длительность_мин,Статус\n';
+
+            schedule.forEach(day => {
+                Object.values(day.routes).forEach(route => {
+                    route.points.forEach(point => {
+                        csv += `${day.day},${day.date},${route.employee},${point.district},${point.id},${point.name},${point.category},${point.timePerVisit},${point.status}\n`;
+                    });
+                });
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `T2_Отчет_маршруты_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+
+            showNotification('📥 Отчёт экспортирован в CSV!', 'success');
+        }
+
+        function updateUIState() {
+            const hasData = ttData.length > 0;
+            const hasSchedule = schedule !== null;
+
+            document.getElementById('planning-no-data').classList.toggle('hidden', hasData);
+            document.getElementById('planning-content').classList.toggle('hidden', !hasData);
+
+            document.getElementById('emergency-no-data').classList.toggle('hidden', hasSchedule);
+            document.getElementById('emergency-content').classList.toggle('hidden', !hasSchedule);
+
+            document.getElementById('analytics-no-data').classList.toggle('hidden', hasSchedule);
+            document.getElementById('analytics-content').classList.toggle('hidden', !hasSchedule);
+
+            if (hasSchedule) {
+                updateAnalytics();
+            } else {
+                renderIncidentBanner();
+            }
+        }
+
+        function showNotification(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 400px;';
+            alert.innerHTML = `<span style="font-size: 1.3em;">${message.startsWith('✅') ? '✅' : message.startsWith('🗑️') ? '🗑️' : message.startsWith('📥') ? '📥' : message.startsWith('⚠️') ? '⚠️' : 'ℹ️'}</span><div style="margin-left: 10px;">${message}</div>`;
+            document.body.appendChild(alert);
+
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateX(100%)';
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            document.getElementById('start-date').value = today.toISOString().split('T')[0];
+            refreshEmployeeUI();
+            refreshDistrictOptions();
+            renderActiveIncidents();
+        });
+    </script>
+</body>
+</html>
